@@ -81,7 +81,7 @@ const (
 )
 
 var (
-	IsTerm = !isatty.IsTerminal(os.Stdout.Fd()) && !isatty.IsCygwinTerminal(os.Stdout.Fd())
+	IsTerm = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
 
 	Output = os.Stdout
 
@@ -91,8 +91,8 @@ var (
 )
 
 type Color struct {
-	params  []Attr
-	noColor bool
+	params []Attr
+	canSet bool
 }
 
 func (c *Color) println(format string, wd WdColor, bg BgColor, a ...interface{}) {
@@ -100,7 +100,7 @@ func (c *Color) println(format string, wd WdColor, bg BgColor, a ...interface{})
 }
 
 func (c *Color) canSetColor() bool {
-	return !c.noColor
+	return c.canSet
 }
 
 func (c *Color) start() string {
@@ -126,6 +126,9 @@ func (c *Color) format() string {
 }
 
 func (c *Color) wrap(format string, a ...interface{}) (string, []interface{}) {
+	if !c.canSetColor() {
+		return format, a
+	}
 	return c.start() + c.format() + format + c.end(), a
 }
 
@@ -141,8 +144,8 @@ func (c *Color) Println(format string, a ...interface{}) {
 func New(attr ...Attr) *Color {
 
 	c := &Color{
-		noColor: !IsTerm,
-		params:  make([]Attr, len(attr)),
+		canSet: IsTerm,
+		params: make([]Attr, len(attr)),
 	}
 	c.AddAttr(attr...)
 
